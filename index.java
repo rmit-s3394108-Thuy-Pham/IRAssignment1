@@ -9,93 +9,185 @@ import java.util.regex.Pattern;
 
 public class index
 {
-
-//main method
   public static void main(String[] args)throws IOException  {
     String sourcefile = "abc";
-    Boolean pFlag = false;
     String stoplistname = "stoplist";
-    String text;
-    String[] docs;
+
+    /* based on the number of command-line arguments to decide whether or not the program should print all content terms */
+      if (args.length == 1)
+        {
+          sourcefile = args[0];
+          parser(readFileandsplitDoc(sourcefile));
+        }
+      else if (args.length == 2)
+        {
+          sourcefile = args[1];
+          for (int i = 0; i < (parser(readFileandsplitDoc(sourcefile))).size(); i++)
+          {
+            System.out.println((parser(readFileandsplitDoc(sourcefile))).get(i).toString());
+          }
+          System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
 
 
-
-    if (args.length == 1)
+        }
+      else if (args.length == 4)
       {
-        sourcefile = args[0];
+        sourcefile = args[3];
+        stoplistname = args[1];
+        for (int i = 0; i < (removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)))).size(); i++)
+        {
+          System.out.println((removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)))).get(i).toString());
+        }
+        System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
       }
-    else if (args.length == 2)
+      else if (args.length ==3)
       {
-        sourcefile = args[1];
-        pFlag = true;
+        sourcefile = args[2];
+        stoplistname = args[1];
       }
-    else if (args.length == 4)
+      else
+      System.out.println("The invocation might be in a wrong format");
+
+
+}
+
+    //method parser()
+    public static ArrayList<String> parser(String[] docs)
     {
-      sourcefile = args[3];
-      pFlag = true;
+        ArrayList<String> words = new ArrayList<>();
+        for  (String eachDoc : docs)
+        {
+          Pattern p = Pattern.compile("(?<=<HEADLINE>)([^\r]*)(?=</TEXT>)" );
+          Matcher m = p.matcher(eachDoc);
+          if (m.find())
+          {
+            String word = (((m.group(1).toString()).replaceAll("</HEADLINE>", "")).replaceAll("[^a-zA-z]", " ")).toLowerCase();
+            String[] term = word.split(" ");
+            List<String> temp = Arrays.asList(term);
+            words.addAll(temp);
+            //words.add(word);
+          }
+        }
+        return words;
     }
-    else if (args.length ==3)
+
+    //method readfileandsplitDoc()
+    public static String[] readFileandsplitDoc(String sourcefile)
     {
-      sourcefile = args[2];
-      stoplistname = args[1];
+          String text;
+          String[] docs = null;
+          try
+          {
+          FileReader instream = new FileReader(sourcefile);
+          BufferedReader bufRead = new BufferedReader(instream);
+          StringBuilder sb = new StringBuilder();
+          try{
+          String inputLine = bufRead.readLine();
+
+            while (inputLine != null)
+            {
+              sb.append(inputLine);
+              sb.append("\n");
+              inputLine = bufRead.readLine();
+            }
+            text = sb.toString();
+            docs = text.split("<DOC>");
+          }
+          catch(IOException e)
+          {
+            System.out.println(e.getMessage());
+          }
+          }
+         catch(FileNotFoundException fnfe)
+          {
+            System.out.println(fnfe.getMessage());
+          }
+
+
+        return docs;
+    }
+
+    //method return docnos
+    public static Hashtable returnMap(String[] docs)
+    {
+          Hashtable<Integer, String> docnos = new Hashtable<Integer, String>();
+          ArrayList<String> docnoslist = new ArrayList<>();
+          for (String eachDoc : docs)
+          {
+            Pattern p = Pattern.compile("<DOCNO> (\\S+) </DOCNO>", Pattern.MULTILINE);
+            Matcher m = p.matcher(eachDoc);
+              if (m.find())
+              {
+                 String docno = m.group(1);
+                 docnoslist.add(docno);
+               }
+
+          }
+
+
+          //mapping the <DOCNO> into "map" file
+          for (int i = 0; i < docnoslist.size(); i++)
+          {
+            docnos.put(i, (docnoslist.get(i)).toString());
+          }
+        return docnos;
+    }
+
+          //System.out.println(docnos);
+
+
+    public static ArrayList<String> removeStopWords(String stoplistname, ArrayList<String> words)
+    {
+      ArrayList<String> textremovedstopwords = new ArrayList<>();
+      String sCurrentLine;
+      Hashtable<String, Integer> stoplist = new Hashtable<String, Integer>();
+
+      try
+      {
+      FileReader fr = new FileReader(stoplistname);
+      BufferedReader br = new BufferedReader(fr);
+      int i = 0;
+      try
+      {
+        while ((sCurrentLine = br.readLine()) != null)
+        {
+          stoplist.put(sCurrentLine.toLowerCase(), i);
+          i++;
+        }
+
+        for (String term : words)
+        {
+          if (!(stoplist.containsKey(term)))
+          {
+              textremovedstopwords.add(term);
+          }
+        }
+      }
+      catch(IOException e)
+      {
+        System.out.println(e);
+      }
     }
 
 
-    FileReader instream = new FileReader(sourcefile);
-    BufferedReader bufRead = new BufferedReader(instream);
-    StringBuilder sb = new StringBuilder();
-    String inputLine = bufRead.readLine();
-    while (inputLine != null)
-    {
-      sb.append(inputLine);
-      sb.append("\n");
-      inputLine = bufRead.readLine();
-    }
-
-    text = sb.toString();
-    docs = text.split("<DOC>");
-
-    ArrayList<String> docnos = new ArrayList<>();
-    for (String eachDoc : docs)
-    {
-
-      Map<Integer, String> map = new TreeMap<Integer, String>();
-      Pattern p = Pattern.compile("<DOCNO> (\\S+) </DOCNO>", Pattern.MULTILINE);
-      Matcher m = p.matcher(eachDoc);
-      if (m.find()) {
-         String docno = m.group(1);
-         docnos.add(docno);
+      catch(FileNotFoundException fnfe)
+       {
+         System.out.println(fnfe.getMessage());
        }
 
 
-    }
-
-    for (int i = 0; i < docnos.size(); i++)
-    {
-      System.out.println(docnos.get(i).toString());
+      return textremovedstopwords;
 
     }
 
-
-    ArrayList<String> words = new ArrayList<>();
-    for  (String eachDoc : docs)
-    {
-      String pattern1 = "<DOCNO>";
-      String pattern2 = "</DOCNO>";
-      Pattern p = Pattern.compile("(?<=<HEADLINE>)([^\r]*)(?=</TEXT>)" );
-      Matcher m = p.matcher(eachDoc);
-      if (m.find())
-      {
-        String word = ((m.group(1).toString()).replaceAll("[^a-zA-z]", " ")).toLowerCase();
-        words.add(word);
-      }
-    }
+    /*
     for (int i = 0; i < words.size(); i++)
     {
       System.out.println(words.get(i).toString());
     }
+    */
 
-    int k = 0;
+    /*
     ArrayList<String> wordsList = new ArrayList<String>();
     String sCurrentLine;
     String[] stopwords = new String[2000];
@@ -103,28 +195,40 @@ public class index
 
     FileReader fr=new FileReader(stoplistname);
     BufferedReader br= new BufferedReader(fr);
-    while ((sCurrentLine = br.readLine()) != null){
+    int k = 0;
+    while ((sCurrentLine = br.readLine()) != null)
+        {
             stopwords[k]=sCurrentLine.toLowerCase();
             k++;
         }
 
 
+
     for(String term : words)
     {
-        String wordCompare = term.toLowerCase();
-        List<String> list = Arrays.asList(stopwords);
-        if(!list.contains(wordCompare))
+        String wordcompare = term.toLowerCase();
+
+        if(!(stopwords.contains(wordcompare)))
         {
-            wordsList.add(wordCompare);
+            wordsList.add(wordcompare);
+            if (pFlag == true)
+              {
+                for (String str : wordsList)
+                {
+                  System.out.println(str + " ");
+                }
+              }
 
         }
     }
+    /*
 
     for (String str : wordsList)
     {
         System.out.print(str+" ");
     }
-  }
+    */
+
 }
 
 
