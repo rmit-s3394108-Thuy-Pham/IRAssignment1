@@ -11,24 +11,26 @@ public class index
 {
   public static void main(String[] args)throws IOException  {
     String sourcefile = "abc";
-    String stoplistname = "stoplist";
+    String stoplistname = "abc";
 
     /* based on the number of command-line arguments to decide whether or not the program should print all content terms */
       if (args.length == 1)
         {
           sourcefile = args[0];
           parser(readFileandsplitDoc(sourcefile));
+          //System.out.println(countDocFre("author", readFileandsplitDoc(sourcefile)));
+          //System.out.println(returnDocIDandInDocFre("author",readFileandsplitDoc(sourcefile)));
         }
       else if (args.length == 2)
         {
           sourcefile = args[1];
           for (int i = 0; i < (parser(readFileandsplitDoc(sourcefile))).size(); i++)
           {
-            System.out.println((parser(readFileandsplitDoc(sourcefile))).get(i).toString());
+            String s = (parser(readFileandsplitDoc(sourcefile))).get(i).toString();
+            if (!(s.isEmpty()))
+              {System.out.println(s);}
           }
           System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
-
-
         }
       else if (args.length == 4)
       {
@@ -36,14 +38,21 @@ public class index
         stoplistname = args[1];
         for (int i = 0; i < (removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)))).size(); i++)
         {
-          System.out.println((removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)))).get(i).toString());
+          String s = (removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)))).get(i).toString();
+          if (!(s.isEmpty()))
+          {
+          System.out.println(s);
+          }
         }
         System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
+        System.out.println((readFileandsplitDoc(sourcefile))[0]);
       }
       else if (args.length ==3)
       {
         sourcefile = args[2];
         stoplistname = args[1];
+        ArrayList<String> testing = removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
+        System.out.println(createLexicon(testing));
       }
       else
       System.out.println("The invocation might be in a wrong format");
@@ -61,7 +70,7 @@ public class index
           Matcher m = p.matcher(eachDoc);
           if (m.find())
           {
-            String word = (((m.group(1).toString()).replaceAll("</HEADLINE>", "")).replaceAll("[^a-zA-z]", " ")).toLowerCase();
+            String word = (((m.group(1).toString()).replaceAll("<.*>", "")).replaceAll("[^a-zA-z]", " ")).toLowerCase();
             String[] term = word.split(" ");
             List<String> temp = Arrays.asList(term);
             words.addAll(temp);
@@ -92,6 +101,7 @@ public class index
             }
             text = sb.toString();
             docs = text.split("<DOC>");
+
           }
           catch(IOException e)
           {
@@ -128,7 +138,7 @@ public class index
           //mapping the <DOCNO> into "map" file
           for (int i = 0; i < docnoslist.size(); i++)
           {
-            docnos.put(i, (docnoslist.get(i)).toString());
+            docnos.put(i+1, (docnoslist.get(i)).toString());
           }
         return docnos;
     }
@@ -169,97 +179,82 @@ public class index
       }
     }
 
-
       catch(FileNotFoundException fnfe)
        {
          System.out.println(fnfe.getMessage());
        }
-
-
       return textremovedstopwords;
 
     }
 
-    /*
-    for (int i = 0; i < words.size(); i++)
+
+  // check if a term appear in a doc or not and return the document frequency (ft)
+  public static int countDocFre(String termcompare, String[] docs)
+  {
+    int count =0;
+    for (String eachdoc: docs)
     {
-      System.out.println(words.get(i).toString());
-    }
-    */
-
-    /*
-    ArrayList<String> wordsList = new ArrayList<String>();
-    String sCurrentLine;
-    String[] stopwords = new String[2000];
-
-
-    FileReader fr=new FileReader(stoplistname);
-    BufferedReader br= new BufferedReader(fr);
-    int k = 0;
-    while ((sCurrentLine = br.readLine()) != null)
+      String[] terms = eachdoc.split(" ");
+        for (int i =0; i < terms.length; i++)
         {
-            stopwords[k]=sCurrentLine.toLowerCase();
-            k++;
-        }
-
-
-
-    for(String term : words)
-    {
-        String wordcompare = term.toLowerCase();
-
-        if(!(stopwords.contains(wordcompare)))
-        {
-            wordsList.add(wordcompare);
-            if (pFlag == true)
-              {
-                for (String str : wordsList)
-                {
-                  System.out.println(str + " ");
-                }
-              }
-
+          if ((terms[i].toLowerCase().contains(termcompare)))
+          {
+            count= count + 1;
+            break;
+          }
         }
     }
-    /*
+    return count;
+  }
 
-    for (String str : wordsList)
+  //method return docID and the within document frequency
+  public static Hashtable returnDocIDandInDocFre(String termcompare, String[] docs)
+  {
+    Hashtable<Integer, Integer> docIDandInDocFre = new Hashtable<Integer, Integer>();
+    for (int m=0; m < docs.length; m++)
     {
-        System.out.print(str+" ");
+      String[] terms = docs[m].split(" ");
+      int inDocFre= 0;
+      int docID = 0;
+        for (int i =0; i< terms.length; i++)
+        {
+          if ((terms[i].toLowerCase().contains(termcompare)))
+          {
+            docID = m;
+            inDocFre = inDocFre + 1;
+          }
+        }
+      if (docID != 0)
+      {
+      docIDandInDocFre.put(docID, inDocFre);
+      }
     }
-    */
+    return docIDandInDocFre;
+  }
+
+  //method to create lexicon
+  public static Hashtable createLexicon(ArrayList<String> arrayStr)
+  {
+    Hashtable<String, Integer> lexicon = new Hashtable<String, Integer>();
+    int n =0;
+    for (int i =0; i < arrayStr.size(); i++)
+    {
+      String key = (arrayStr.get(i)).toString();
+
+      if (key.length() >0 && (!key.isEmpty()))
+        {
+          if (!(lexicon.containsKey(key)))
+          {
+            lexicon.put(key, n);
+            n ++;
+          }
+        }
+    }
+    return lexicon;
+  }
+
+
+  //method to create invertedlist
+
 
 }
-
-
-
-
-/*    for (int i = 0; i < words.size(); i++)
-    {
-      String preparedwords =((words.get(i).toString()).replaceAll("[^a-zA-z]", " ")).toLowerCase();
-    }
-
-      System.out.println(preparedwords);
-
-/*    //docnos is an Array of Strings atm
-    for (int i = 0; i < docnos.size(); i++)
-    {
-      int docID = i;
-      map.put(docID, (docnos.get(i)).toString());
-    }
-
-    for (Map<Integer, String> eachDocNo : map)
-    {
-      System.out.println((eachDocNo.getKey())+ "\t" + (eachDocNo.getValue()));
-    }
-
-*/
-
-
-
-
-
-
-
-
-//method to remove stopping
