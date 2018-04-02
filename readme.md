@@ -1,1 +1,1 @@
-hi
+the map, lexicon and inversted list will only be created when user enable stopping function.

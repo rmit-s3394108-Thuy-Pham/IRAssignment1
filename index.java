@@ -12,14 +12,17 @@ public class index
   public static void main(String[] args)throws IOException  {
     String sourcefile = "abc";
     String stoplistname = "abc";
-
+    String lexicon = "lexicon";
+    String invlists = "invlists";
+    String map = "map";
+    PrintWriter pwL = new PrintWriter(new BufferedWriter(new FileWriter(lexicon)));
+    PrintWriter pwI = new PrintWriter(new BufferedWriter(new FileWriter(invlists)));
+    PrintWriter pwM = new PrintWriter(new BufferedWriter(new FileWriter(map)));
     /* based on the number of command-line arguments to decide whether or not the program should print all content terms */
       if (args.length == 1)
         {
           sourcefile = args[0];
           parser(readFileandsplitDoc(sourcefile));
-          //System.out.println(countDocFre("author", readFileandsplitDoc(sourcefile)));
-          //System.out.println(returnDocIDandInDocFre("author",readFileandsplitDoc(sourcefile)));
         }
       else if (args.length == 2)
         {
@@ -30,7 +33,7 @@ public class index
             if (!(s.isEmpty()))
               {System.out.println(s);}
           }
-          System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
+
         }
       else if (args.length == 4)
       {
@@ -44,15 +47,68 @@ public class index
           System.out.println(s);
           }
         }
-        System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
-        System.out.println((readFileandsplitDoc(sourcefile))[0]);
+        ArrayList<String> testing = removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
+        Hashtable lexiconTable = createLexicon(testing);
+        for (Object key : lexiconTable.keySet())
+        {
+          pwL.println(key + "\t" + lexiconTable.get(key));
+        }
+
+        for (Object key : lexiconTable.keySet())
+        {
+          String docFre = Integer.toBinaryString(countDocFre((key.toString()), readFileandsplitDoc(sourcefile)));
+          pwI.print(docFre);
+          Hashtable invertedlistTable = returnDocIDandInDocFre(key.toString(), readFileandsplitDoc(sourcefile));
+          for (Object docID : invertedlistTable.keySet())
+            {
+            int eachdocID = (int)docID;
+            String withinDocFrequen = Integer.toBinaryString((int)(invertedlistTable.get(eachdocID)));
+            pwI.print( Integer.toBinaryString(eachdocID));
+            pwI.print(withinDocFrequen);
+            }
+        }
+
+        pwM.println(returnMap(readFileandsplitDoc(sourcefile)));
+
+
+        pwL.close();
+        pwI.close();
+        pwM.close();
+        //System.out.println(returnMap(readFileandsplitDoc(sourcefile)));
+
       }
       else if (args.length ==3)
       {
         sourcefile = args[2];
         stoplistname = args[1];
         ArrayList<String> testing = removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
-        System.out.println(createLexicon(testing));
+        Hashtable lexiconTable = createLexicon(testing);
+        for (Object key : lexiconTable.keySet())
+        {
+          pwL.println(key + "\t" + lexiconTable.get(key));
+        }
+
+        for (Object key : lexiconTable.keySet())
+        {
+          String docFre = Integer.toBinaryString(countDocFre((key.toString()), readFileandsplitDoc(sourcefile)));
+          pwI.print(docFre);
+          Hashtable invertedlistTable = returnDocIDandInDocFre(key.toString(), readFileandsplitDoc(sourcefile));
+          for (Object docID : invertedlistTable.keySet())
+            {
+            int eachdocID = (int)docID;
+            String withinDocFrequen = Integer.toBinaryString((int)(invertedlistTable.get(eachdocID)));
+            pwI.print( Integer.toBinaryString(eachdocID));
+            pwI.print(withinDocFrequen);
+            }
+        }
+
+        pwM.println(returnMap(readFileandsplitDoc(sourcefile)));
+
+
+        pwL.close();
+        pwI.close();
+        pwM.close();
+
       }
       else
       System.out.println("The invocation might be in a wrong format");
@@ -131,10 +187,7 @@ public class index
                  String docno = m.group(1);
                  docnoslist.add(docno);
                }
-
           }
-
-
           //mapping the <DOCNO> into "map" file
           for (int i = 0; i < docnoslist.size(); i++)
           {
