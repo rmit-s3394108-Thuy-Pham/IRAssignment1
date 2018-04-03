@@ -95,7 +95,7 @@ public class index
           eachPosting = eachPosting.concat(listOfDocIdandInDocFre.get(i).toString());
         }
         lexiconTable.put(key.toString(), fileoffsetpostion);
-        fileoffsetpostion = fileoffsetpostion + 1 + 2*(listOfDocIdandInDocFre.size());
+        fileoffsetpostion = fileoffsetpostion + 1 + listOfDocIdandInDocFre.size();
         pwI.print(eachPosting); // print to the invlist file
       }
 
