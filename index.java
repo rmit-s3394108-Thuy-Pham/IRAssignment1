@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 public class index
 {
   public static void main(String[] args)throws IOException  {
-    String sourcefile = "abc";
-    String stoplistname = "abc";
+    String sourcefile = new String();
+    String stoplistname = new String();
     /* based on the number of command-line arguments
       to decide whether or not the program should print all content terms */
       //case1: no stopping no prinitng
@@ -54,7 +54,10 @@ public class index
         sourcefile = args[2];
         stoplistname = args[1];
         removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
+
       }
+
+
       else
       System.out.println("The invocation might be in a wrong format");
 
@@ -67,24 +70,21 @@ public class index
       PrintWriter pwM = new PrintWriter(new BufferedWriter(new FileWriter(map)));
       ArrayList<String> parsedandstoppedTerms = removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
       Hashtable<String, Integer> lexiconTable = createLexicon(parsedandstoppedTerms);
+      Hashtable<Integer, String> mapTable = returnMap(readFileandsplitDoc(sourcefile));
 
       int fileoffsetpostion =0;
       for (Object key : lexiconTable.keySet())
       {
         String eachPosting = new String();
-        String docFre = Integer.toBinaryString(countDocFre((key.toString()), readFileandsplitDoc(sourcefile)));
-        int numBits = 32;
-        docFre = docFre.substring((docFre.length() - numBits) >= 0 ? (docFre.length() - numBits) : 0);
+        String docFre = intToBinary(countDocFre((key.toString()), readFileandsplitDoc(sourcefile)), 32);
         eachPosting = eachPosting.concat(docFre);
         Hashtable<Integer, Integer> docIDandInDocFreTable = returnDocIDandInDocFre(key.toString(), readFileandsplitDoc(sourcefile));
         ArrayList<String> listOfDocIdandInDocFre = new ArrayList<>();
         for (Object docID : docIDandInDocFreTable.keySet())
           {
           int eachdocIDinInt = (int)docID;
-          String withinDocFrequen = Integer.toBinaryString((int)(docIDandInDocFreTable.get(eachdocIDinInt)));
-          withinDocFrequen = withinDocFrequen.substring((withinDocFrequen.length() - numBits) >= 0 ? withinDocFrequen.length() - numBits : 0);
-          String eachdocID = Integer.toBinaryString(eachdocIDinInt);
-          eachdocID = eachdocID.substring((eachdocID.length() - numBits) >= 0 ? eachdocID.length() - numBits : 0);
+          String withinDocFrequen = intToBinary((int)(docIDandInDocFreTable.get(eachdocIDinInt)), 32);
+          String eachdocID = intToBinary((eachdocIDinInt), 32);
           listOfDocIdandInDocFre.add(eachdocID);
           listOfDocIdandInDocFre.add(withinDocFrequen);
           //pwI.print( Integer.toBinaryString(eachdocID));
@@ -105,8 +105,10 @@ public class index
         pwL.println(key + "\t" + lexiconTable.get(key));
       }
       // print to the map file
-      pwM.println(returnMap(readFileandsplitDoc(sourcefile)));
-
+      for (Object keyofMap : mapTable.keySet())
+      {
+        pwM.println(keyofMap + "\t" + mapTable.get(keyofMap));
+      }
 
       pwL.close();
       pwI.close();
@@ -114,6 +116,23 @@ public class index
 
 
 }
+      // method convert integer to fixed number of numBits
+      public static String intToBinary (int n, int numOfBits)
+      {
+           String binary = "";
+           for(int i = 0; i < numOfBits; ++i, n/=2) {
+              switch (n % 2) {
+                 case 0:
+                    binary = "0" + binary;
+                    break;
+                 case 1:
+                    binary = "1" + binary;
+                    break;
+              }
+           }
+
+           return binary;
+        }
       //method to create lexicon
       public static Hashtable<String, Integer> createLexicon(ArrayList<String> arrayStr)
       {
@@ -241,7 +260,7 @@ public class index
 
 
     //method return docnos
-    public static Hashtable returnMap(String[] docs)
+    public static Hashtable<Integer, String> returnMap(String[] docs)
     {
           Hashtable<Integer, String> docnos = new Hashtable<Integer, String>();
           ArrayList<String> docnoslist = new ArrayList<>();
