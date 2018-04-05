@@ -44,7 +44,7 @@ public class index
           String s = parsedandstoppedText.get(i).toString();
           if (!(s.isEmpty()))
           {
-          System.out.println(s);
+            System.out.println(s);
           }
         }
       }
@@ -53,279 +53,324 @@ public class index
       {
         sourcefile = args[2];
         stoplistname = args[1];
-        removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
-
+        createLexiconInvlistsMap(sourcefile, stoplistname);
       }
-
 
       else
       System.out.println("The invocation might be in a wrong format");
+    }
 
+    public static void createLexiconInvlistsMap(String sourcefile, String stoplistname)
+    {
       /* INDEXING MODULE*/
       String lexicon = "lexicon";
       String invlists = "invlists";
       String map = "map";
-      PrintWriter pwL = new PrintWriter(new BufferedWriter(new FileWriter(lexicon)));
-      PrintWriter pwI = new PrintWriter(new BufferedWriter(new FileWriter(invlists)));
-      PrintWriter pwM = new PrintWriter(new BufferedWriter(new FileWriter(map)));
-      ArrayList<String> parsedandstoppedTerms = removeStopWords(stoplistname, parser(readFileandsplitDoc(sourcefile)));
+      String[] docs = readFileandsplitDoc(sourcefile);
+      ArrayList<String> parsedandstoppedTerms = removeStopWords(stoplistname, parser(docs));
       Hashtable<String, Integer> lexiconTable = createLexicon(parsedandstoppedTerms);
-      Hashtable<Integer, String> mapTable = returnMap(readFileandsplitDoc(sourcefile));
+      Hashtable<Integer, String> mapTable = returnMap(docs);
 
       int fileoffsetpostion =0;
+      String Sinvlists = new String();
+
       for (Object key : lexiconTable.keySet())
       {
         String eachPosting = new String();
-        String docFre = intToBinary(countDocFre((key.toString()), readFileandsplitDoc(sourcefile)), 32);
+        String docFre = intToBinary(countDocFre((key.toString()), docs), 32);
         eachPosting = eachPosting.concat(docFre);
-        Hashtable<Integer, Integer> docIDandInDocFreTable = returnDocIDandInDocFre(key.toString(), readFileandsplitDoc(sourcefile));
-        ArrayList<String> listOfDocIdandInDocFre = new ArrayList<>();
+        Hashtable<Integer, Integer> docIDandInDocFreTable = returnDocIDandInDocFre(key.toString(), docs);
         for (Object docID : docIDandInDocFreTable.keySet())
-          {
+        {
           int eachdocIDinInt = (int)docID;
           String withinDocFrequen = intToBinary((int)(docIDandInDocFreTable.get(eachdocIDinInt)), 32);
           String eachdocID = intToBinary((eachdocIDinInt), 32);
-          listOfDocIdandInDocFre.add(eachdocID);
-          listOfDocIdandInDocFre.add(withinDocFrequen);
-          //pwI.print( Integer.toBinaryString(eachdocID));
-          //pwI.print(withinDocFrequen);
-          }
-        for (int i =0; i < listOfDocIdandInDocFre.size(); i++)
-        {
-          eachPosting = eachPosting.concat(listOfDocIdandInDocFre.get(i).toString());
+          eachPosting = eachPosting.concat(eachdocID);
+          eachPosting = eachPosting.concat(withinDocFrequen);
         }
         lexiconTable.put(key.toString(), fileoffsetpostion);
-        fileoffsetpostion = fileoffsetpostion + 1 + listOfDocIdandInDocFre.size();
-        pwI.print(eachPosting); // print to the invlist file
+        fileoffsetpostion = fileoffsetpostion + 1 + docIDandInDocFreTable.size()*2;
+        Sinvlists = Sinvlists.concat(eachPosting);
+        // pwI.print(eachPosting);
+        // pwI.close();
+           // print to the invlist file
       }
 
-      // print to the lexicon file
+
+      try{
+        PrintWriter pwI = new PrintWriter(new BufferedWriter(new FileWriter(invlists)));
+        pwI.print(Sinvlists);
+        pwI.close();
+      }
+      catch (IOException ex)
+      {
+        System.out.println(ex.getMessage());
+      }
+
+
+      // // print to the lexicon file
+      String Slexicon = new String();
+      String Smap = new String();
+
       for (Object key : lexiconTable.keySet())
       {
-        pwL.println(key + "\t" + lexiconTable.get(key));
+        // pwL.println(key + "\t" + lexiconTable.get(key));
+        Slexicon = Slexicon.concat(key.toString());
+        Slexicon = Slexicon.concat("\t");
+        Slexicon = Slexicon + (lexiconTable.get(key));
+        Slexicon = Slexicon.concat("\n");
       }
+      try {
+        PrintWriter pwL = new PrintWriter(new BufferedWriter(new FileWriter(lexicon)));
+        pwL.println(Slexicon);
+        pwL.close();
+      }
+      catch (IOException ex)
+      {
+        System.out.println(ex.getMessage());
+      }
+
       // print to the map file
+
       for (Object keyofMap : mapTable.keySet())
       {
-        pwM.println(keyofMap + "\t" + mapTable.get(keyofMap));
+        // pwM.println(keyofMap + "\t" + mapTable.get(keyofMap));
+        Smap = Smap.concat(keyofMap.toString());
+        Smap = Smap.concat("\t");
+        Smap = Smap.concat(mapTable.get(keyofMap));
+        Smap = Smap.concat("\n");
       }
 
-      pwL.close();
-      pwI.close();
-      pwM.close();
-
-
-}
-      // method convert integer to fixed number of numBits
-      public static String intToBinary (int n, int numOfBits)
-      {
-           String binary = "";
-           for(int i = 0; i < numOfBits; ++i, n/=2) {
-              switch (n % 2) {
-                 case 0:
-                    binary = "0" + binary;
-                    break;
-                 case 1:
-                    binary = "1" + binary;
-                    break;
-              }
-           }
-
-           return binary;
-        }
-      //method to create lexicon
-      public static Hashtable<String, Integer> createLexicon(ArrayList<String> arrayStr)
-      {
-        Hashtable<String, Integer> lexicon = new Hashtable<>();
-        int n =0;
-        for (int i =0; i < arrayStr.size(); i++)
-        {
-          String key = (arrayStr.get(i)).toString();
-
-          if (key.length() >0 && (!key.isEmpty()))
-            {
-              if (!(lexicon.containsKey(key)))
-              {
-                lexicon.put(key, n);
-                n ++;
-              }
-            }
-        }
-        return lexicon;
-      }
-      // method check if a term appear in a doc or not and return the document frequency (ft)
-      public static int countDocFre(String termcompare, String[] docs)
-      {
-        int count =0;
-        for (String eachdoc: docs)
-        {
-          String[] terms = eachdoc.split(" ");
-            for (int i =0; i < terms.length; i++)
-            {
-              if ((terms[i].toLowerCase().contains(termcompare)))
-              {
-                count= count + 1;
-                break;
-              }
-            }
-        }
-        return count;
-      }
-
-      //method return docID and the within document frequency
-      public static Hashtable<Integer, Integer> returnDocIDandInDocFre(String termcompare, String[] docs)
-      {
-        Hashtable<Integer, Integer> docIDandInDocFre = new Hashtable<Integer, Integer>();
-        for (int m=0; m < docs.length; m++)
-        {
-          String[] terms = docs[m].split(" ");
-          int inDocFre= 0;
-          int docID = 0;
-            for (int i =0; i< terms.length; i++)
-            {
-              if ((terms[i].toLowerCase().contains(termcompare)))
-              {
-                docID = m;
-                inDocFre = inDocFre + 1;
-              }
-            }
-          if (docID != 0)
-          {
-          docIDandInDocFre.put(docID, inDocFre);
-          }
-        }
-        return docIDandInDocFre;
-      }
-
-
-
-
-
-    //method readfileandsplitDoc()
-    public static String[] readFileandsplitDoc(String sourcefile)
+      try{
+        PrintWriter pwM = new PrintWriter(new BufferedWriter(new FileWriter(map)));
+        pwM.println(Smap);
+        pwM.close();
+    }
+    catch (IOException ex)
     {
-          String text;
-          String[] docs = null;
-          try
-          {
-          FileReader instream = new FileReader(sourcefile);
-          BufferedReader bufRead = new BufferedReader(instream);
-          StringBuilder sb = new StringBuilder();
-          try{
-          String inputLine = bufRead.readLine();
+        System.out.println(ex.getMessage());
+    }
+  }
 
-            while (inputLine != null)
-            {
-              sb.append(inputLine);
-              sb.append("\n");
-              inputLine = bufRead.readLine();
-            }
-            text = sb.toString();
-            docs = text.split("<DOC>");
-
-          }
-          catch(IOException e)
-          {
-            System.out.println(e.getMessage());
-          }
-          }
-         catch(FileNotFoundException fnfe)
-          {
-            System.out.println(fnfe.getMessage());
-          }
-
-
-        return docs;
+  // method convert integer to fixed number of numBits
+  public static String intToBinary (int n, int numOfBits)
+  {
+    String binary = "";
+    for(int i = 0; i < numOfBits; ++i, n/=2) {
+      switch (n % 2) {
+        case 0:
+        binary = "0" + binary;
+        break;
+        case 1:
+        binary = "1" + binary;
+        break;
+      }
     }
 
-    //method parser()
-    public static ArrayList<String> parser(String[] docs)
+    return binary;
+  }
+
+  //method to create lexicon
+  public static Hashtable<String, Integer> createLexicon(ArrayList<String> arrayStr)
+  {
+    Hashtable<String, Integer> lexicon = new Hashtable<>();
+    int n =0;
+    for (int i =0; i < arrayStr.size(); i++)
     {
-        ArrayList<String> words = new ArrayList<>();
-        for  (String eachDoc : docs)
+      String key = (arrayStr.get(i)).toString();
+
+      if (key.length() >0 && (!key.isEmpty()))
+      {
+        if (!(lexicon.containsKey(key)))
         {
-          Pattern p = Pattern.compile("(?<=<HEADLINE>)([^\r]*)(?=</TEXT>)" );
-          Matcher m = p.matcher(eachDoc);
-          if (m.find())
+          lexicon.put(key, n);
+          n ++;
+        }
+      }
+    }
+    return lexicon;
+  }
+  // method check if a term appear in a doc or not and return the document frequency (ft)
+
+  public static int countDocFre(String termcompare, String[] docs)
+  {
+    int count =0;
+    for (String eachdoc: docs)
+    {
+      if (!eachdoc.isEmpty())
+      {
+        String[] terms = eachdoc.split(" ");
+        for (int i =0; i < terms.length; i++)
+        {
+          if ((terms[i].toLowerCase().contains(termcompare)))
           {
-            String word = (((m.group(1).toString()).replaceAll("<.*>", "")).replaceAll("[^a-zA-z]", " ")).toLowerCase();
-            String[] term = word.split(" ");
-            List<String> temp = Arrays.asList(term);
-            words.addAll(temp);
-            //words.add(word);
+            count= count + 1;
+            break;
           }
         }
-        return words;
+      }
     }
+    return count;
+  }
 
 
-    //method return docnos
-    public static Hashtable<Integer, String> returnMap(String[] docs)
+  //method return docID and the within document frequency
+  public static Hashtable<Integer, Integer> returnDocIDandInDocFre(String termcompare, String[] docs)
+  {
+    Hashtable<Integer, Integer> docIDandInDocFre = new Hashtable<Integer, Integer>();
+    for (int m=1; m < docs.length; m++)
     {
-          Hashtable<Integer, String> docnos = new Hashtable<Integer, String>();
-          ArrayList<String> docnoslist = new ArrayList<>();
-          for (String eachDoc : docs)
-          {
-            Pattern p = Pattern.compile("<DOCNO> (\\S+) </DOCNO>", Pattern.MULTILINE);
-            Matcher m = p.matcher(eachDoc);
-              if (m.find())
-              {
-                 String docno = m.group(1);
-                 docnoslist.add(docno);
-               }
-          }
-          //mapping the <DOCNO> into "map" file
-          for (int i = 0; i < docnoslist.size(); i++)
-          {
-            docnos.put(i+1, (docnoslist.get(i)).toString());
-          }
-        return docnos;
+      String[] terms = docs[m].split(" ");
+      int inDocFre= 0;
+      int docID = 0;
+      for (int i =0; i< terms.length; i++)
+      {
+        if ((terms[i].toLowerCase().contains(termcompare)))
+        {
+          docID = m;
+          inDocFre = inDocFre + 1;
+        }
+      }
+      if (docID != 0)
+      {
+        docIDandInDocFre.put(docID, inDocFre);
+      }
+
     }
+    return docIDandInDocFre;
+  }
 
 
-    //method removeStopwords
-    public static ArrayList<String> removeStopWords(String stoplistname, ArrayList<String> words)
+
+
+
+  //method readfileandsplitDoc()
+  public static String[] readFileandsplitDoc(String sourcefile)
+  {
+    String text;
+    String[] docs = null;
+    try
     {
-      ArrayList<String> textremovedstopwords = new ArrayList<>();
-      String sCurrentLine;
-      Hashtable<String, Integer> stoplist = new Hashtable<String, Integer>();
+      FileReader instream = new FileReader(sourcefile);
+      BufferedReader bufRead = new BufferedReader(instream);
+      StringBuilder sb = new StringBuilder();
+      try{
+        String inputLine = bufRead.readLine();
 
+        while (inputLine != null)
+        {
+          sb.append(inputLine);
+          sb.append("\n");
+          inputLine = bufRead.readLine();
+        }
+        text = sb.toString();
+        docs = text.split("<DOC>");
+        instream.close();
+        bufRead.close();
+      }
+      catch(IOException e)
+      {
+        System.out.println(e.getMessage());
+      }
+    }
+    catch(FileNotFoundException fnfe)
+    {
+      System.out.println(fnfe.getMessage());
+    }
+    return docs;
+  }
+
+
+  //method parser()
+  public static ArrayList<String> parser(String[] docs)
+  {
+    ArrayList<String> words = new ArrayList<>();
+    for  (String eachDoc : docs)
+    {
+      Pattern p = Pattern.compile("(?<=<HEADLINE>)([^\r]*)(?=</TEXT>)" );
+      Matcher m = p.matcher(eachDoc);
+      if (m.find())
+      {
+        String word = (((m.group(1).toString()).replaceAll("<.*>", "")).replaceAll("[^a-zA-z]", " ")).toLowerCase();
+        String[] terms = word.split(" ");
+        // List<String> temp = Arrays.asList(term);
+        for (String term: terms)
+        {
+          words.add(term);
+        }
+        //words.add(word);
+      }
+    }
+    return words;
+  }
+
+
+  //method return docnos
+  public static Hashtable<Integer, String> returnMap(String[] docs)
+  {
+    Hashtable<Integer, String> docnos = new Hashtable<Integer, String>();
+    ArrayList<String> docnoslist = new ArrayList<>();
+    for (String eachDoc : docs)
+    {
+      Pattern p = Pattern.compile("<DOCNO> (\\S+) </DOCNO>", Pattern.MULTILINE);
+      Matcher m = p.matcher(eachDoc);
+      if (m.find())
+      {
+        String docno = m.group(1);
+        docnoslist.add(docno);
+      }
+    }
+    //mapping the <DOCNO> into "map" file
+    for (int i = 0; i < docnoslist.size(); i++)
+    {
+      docnos.put(i+1, (docnoslist.get(i)).toString());
+    }
+    return docnos;
+  }
+
+
+  //method removeStopwords
+  public static ArrayList<String> removeStopWords(String stoplistname, ArrayList<String> words)
+  {
+    ArrayList<String> textremovedstopwords = new ArrayList<>();
+    String sCurrentLine;
+    Hashtable<String, Integer> stoplist = new Hashtable<String, Integer>();
+
+    try
+    {
+      FileReader fr = new FileReader(stoplistname);
+      BufferedReader br = new BufferedReader(fr);
+      int i = 0;
       try
       {
-          FileReader fr = new FileReader(stoplistname);
-          BufferedReader br = new BufferedReader(fr);
-          int i = 0;
-            try
-              {
-                while ((sCurrentLine = br.readLine()) != null)
-                  {
-                    stoplist.put(sCurrentLine.toLowerCase(), i);
-                    i++;
-                  }
-
-                for (String term : words)
-                  {
-                    if (!(stoplist.containsKey(term)))
-                    {
-                        textremovedstopwords.add(term);
-                    }
-                  }
-                }
-            catch(IOException e)
-              {
-                System.out.println(e);
-              }
+        while ((sCurrentLine = br.readLine()) != null)
+        {
+          stoplist.put(sCurrentLine.toLowerCase(), i);
+          i++;
         }
 
-      catch(FileNotFoundException fnfe)
-       {
-         System.out.println(fnfe.getMessage());
-       }
-      return textremovedstopwords;
+        for (String term : words)
+        {
+          if (!(stoplist.containsKey(term)))
+          {
+            textremovedstopwords.add(term);
+          }
+        }
+        br.close();
+        fr.close();
+      }
+      catch(IOException e)
+      {
+        System.out.println(e);
+      }
     }
 
-
-
+    catch(FileNotFoundException fnfe)
+    {
+      System.out.println(fnfe.getMessage());
+    }
+    return textremovedstopwords;
+  }
 
 
   //method to create invertedlist

@@ -38,10 +38,16 @@ public class search
       String sCurrentLine;
         try
           {
-            while ((sCurrentLine = br.readLine()) != null)
+			sCurrentLine = br.readLine(); 
+            while ((sCurrentLine  != null) && (!sCurrentLine.equals("\n")))
               {
-                String[] lexiconElements = sCurrentLine.split("\t");
-                lexicon.put(lexiconElements[0], Integer.parseInt(lexiconElements[1]));
+                String[] lexiconElements = new String[2];
+				lexiconElements = sCurrentLine.split("\t");
+				if (lexiconElements.length ==2) 	
+                {
+					lexicon.put(lexiconElements[0], Integer.parseInt(lexiconElements[1]));
+				}
+				sCurrentLine = br.readLine();
               }
           }
 
@@ -63,10 +69,11 @@ public class search
           String sLine;
           try
           {
-            while  ((sLine = bReader.readLine()) != null)
+            while  (((sLine = bReader.readLine()) != null) && (!sLine.equals("\n")))
             {
               String[] mapElements = sLine.split("\t");
-              map.put(Integer.parseInt(mapElements[0]), mapElements[1]);
+			  if (mapElements.length ==2)
+              {map.put(Integer.parseInt(mapElements[0]), mapElements[1]);}
             }
           }
           catch (IOException e)
