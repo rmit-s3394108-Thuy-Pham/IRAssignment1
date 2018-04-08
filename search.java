@@ -27,87 +27,93 @@ public class search
         mapname = args[2];
         for (int i =3; i < args.length; i++)
         {
-          queryterms.add((args[i].replaceAll("[^a-zA-z]", "")).toLowerCase());
+          String query = (args[i].replaceAll("[^a-zA-z]", " ")).toLowerCase(); // process the query term same as the way process lexicon
+          String[] temp = query.split(" ");
+          for (String term: temp)
+          {
+           queryterms.add(term);
+          }
         }
       }
-
+      /*loading lexicon to a hashtable again to process*/
       try
       {
-      FileReader fr = new FileReader(lexiconname);
-      BufferedReader br = new BufferedReader(fr);
-      String sCurrentLine;
+        FileReader fr = new FileReader(lexiconname);
+        BufferedReader br = new BufferedReader(fr);
+        String sCurrentLine;
         try
+        {
+          sCurrentLine = br.readLine();
+          while ((sCurrentLine  != null) && (!sCurrentLine.equals("\n")))
           {
-			sCurrentLine = br.readLine(); 
-            while ((sCurrentLine  != null) && (!sCurrentLine.equals("\n")))
-              {
-                String[] lexiconElements = new String[2];
-				lexiconElements = sCurrentLine.split("\t");
-				if (lexiconElements.length ==2) 	
-                {
-					lexicon.put(lexiconElements[0], Integer.parseInt(lexiconElements[1]));
-				}
-				sCurrentLine = br.readLine();
-              }
+            String[] lexiconElements = new String[2];
+            lexiconElements = sCurrentLine.split("\t");
+            if (lexiconElements.length ==2)
+            {
+              lexicon.put(lexiconElements[0], Integer.parseInt(lexiconElements[1]));
+            }
+            sCurrentLine = br.readLine();
           }
-
+        }
         catch (IOException e)
-          {
-            System.out.println(e);
-          }
-        }
-        catch(FileNotFoundException fnfe)
         {
-          System.out.println(fnfe.getMessage());
+          System.out.println(e);
         }
-
-
+      }
+      catch(FileNotFoundException fnfe)
+      {
+        System.out.println(fnfe.getMessage());
+      }
+      /*Loading map from disk to memory*/
+      try
+      {
+        FileReader fReader = new FileReader(mapname);
+        BufferedReader bReader = new BufferedReader(fReader);
+        String sLine;
         try
         {
-          FileReader fReader = new FileReader(mapname);
-          BufferedReader bReader = new BufferedReader(fReader);
-          String sLine;
-          try
+          while  (((sLine = bReader.readLine()) != null) && (!sLine.equals("\n")))
           {
-            while  (((sLine = bReader.readLine()) != null) && (!sLine.equals("\n")))
+            String[] mapElements = sLine.split("\t");
+            if (mapElements.length ==2)
             {
-              String[] mapElements = sLine.split("\t");
-			  if (mapElements.length ==2)
-              {map.put(Integer.parseInt(mapElements[0]), mapElements[1]);}
+              map.put(Integer.parseInt(mapElements[0]), mapElements[1]);
             }
           }
-          catch (IOException e)
-            {
-              System.out.println(e);
-            }
         }
-        catch(FileNotFoundException fnfe)
+        catch (IOException e)
         {
-          System.out.println(fnfe.getMessage());
+          System.out.println(e);
         }
+      }
+      catch(FileNotFoundException fnfe)
+      {
+        System.out.println(fnfe.getMessage());
+      }
 
-        for (String queryterm : queryterms)
+      for (String queryterm : queryterms)
+      {
+        if (lexicon.containsKey(queryterm))
         {
           System.out.println(queryterm);
-          int fileoffsetpostion = lexicon.get(queryterm);
-          byte[] docFreinBinary = new byte[32];
+          int fileoffsetpostion = lexicon.get(queryterm); //get how many blocks we need to skip
+          byte[] docFreinBinary = new byte[18];
           RandomAccessFile raFile = new RandomAccessFile(invlistsname, "r");
-          raFile.seek(fileoffsetpostion*32);
+          raFile.seek(fileoffsetpostion*18); // each block has 18 bits
           raFile.readFully(docFreinBinary);
-          //System.out.println(new String(magic));
           int docFre = Integer.parseInt((new String(docFreinBinary)), 2);
           System.out.println(docFre);
           for (int i = 0; i < docFre; i ++)
-            {
-              byte[] docIDinBinary = new byte[32];
-              raFile.readFully(docIDinBinary);
-              int docID = Integer.parseInt((new String(docIDinBinary)), 2);
-              byte[] inDocFreinBinary = new byte[32];
-              raFile.readFully(inDocFreinBinary);
-              int inDocFre = Integer.parseInt((new String(inDocFreinBinary)), 2);
-              System.out.println(map.get(docID) + "     " + inDocFre);
-            }
-
+          {
+            byte[] docIDinBinary = new byte[18];
+            raFile.readFully(docIDinBinary);
+            int docID = Integer.parseInt((new String(docIDinBinary)), 2);
+            byte[] inDocFreinBinary = new byte[18];
+            raFile.readFully(inDocFreinBinary);
+            int inDocFre = Integer.parseInt((new String(inDocFreinBinary)), 2);
+            System.out.println(map.get(docID) + "     " + inDocFre);
+          }
         }
+      }
     }
 }
